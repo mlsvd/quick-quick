@@ -3,15 +3,22 @@
 ROOT_DIR=~/qq_dir
 
 is_dialog_installed() {
-  command -v dialog2 >/dev/null 2>&1
+  command -v dialog >/dev/null 2>&1
 }
 
 qq_main() {
-  qq_show_main_menu_dialog
+  local dir=${1:-$ROOT_DIR}
+  qq_show_main_menu_dialog "$dir"
 }
 
 qq_show_main_menu_dialog() {
-  local dir=$ROOT_DIR
+  local dir=$1
+  # Check if the directory is readable and accessible
+  if [ ! -d "$dir" ] || [ ! -r "$dir" ]; then
+    echo "Error: The directory '$dir' is not accessible or readable."
+    return 1
+  fi
+
   qq_show_menu_dialog "$dir" "$dir"
 }
 
@@ -22,11 +29,12 @@ qq_show_menu_dialog() {
   local choice
   declare -A options_map
 
-  local index=1
+  clear
 
+  local index=1
   if [ "$current_dir" != "$ROOT_DIR" ]; then
     index=0
-    dialog_options+=("${index})" "<- back ${parent_dir}")
+    dialog_options+=("${index})" "<<< return back")
     options_map["${index})"]="$parent_dir"
     index=$((index + 1))
   fi
@@ -48,35 +56,54 @@ qq_show_menu_dialog() {
   fi
 
   if is_dialog_installed; then
-      choice=$(dialog --menu "Select command to use ${current_dir}" 20 60 15 "${dialog_options[@]}" 3>&1 1>&2 2>&3 3>&-)
-    else
-      echo "Select command to use ${current_dir}:"
-      for option in "${dialog_options[@]}"; do
-        echo "$option"
-      done
-      read -p "Enter your choice: " choice
-    fi
-#  choice=$(dialog --menu "Select command to use ${dir}" 20 60 15 "${dialog_options[@]}" 3>&1 1>&2 2>&3 3>&-)
+    choice=$(dialog --menu "Select command to use ${current_dir}" 20 60 15 "${dialog_options[@]}" 3>&1 1>&2 2>&3 3>&-)
+  else
+    echo "Select command to use ${current_dir}:"
+    echo "-------------------------------------"
+    for ((i=0; i<${#dialog_options[@]}; i+=2)); do
+      key=${dialog_options[i]}
+      value=${dialog_options[i+1]}
+      echo "$key $value"
+    done
+    echo "-------------------------------------"
+    read -p "Enter your choice: " choice
+  fi
 
   if [ -n "$choice" ]; then
-    selected_value=$(echo "${options_map[$choice]}")
+    local sanitized_choice=$(sanitize_user_choice "$choice")
+    selected_value=$(echo "${options_map[$sanitized_choice]}")
     select_dialog_option "${selected_value}" "${parent_dir}"
   else
     echo "No selection made."
   fi
 }
 
+sanitize_user_choice() {
+  local choice=$1
+  local sanitized_choice="${choice//[^0-9]/}"
+  # Check if the last character is not ')', then append ')'
+  if [[ "$sanitized_choice" != *")" ]]; then
+    sanitized_choice="${sanitized_choice})"
+  fi
+  echo $sanitized_choice
+}
+
 select_dialog_option() {
   local current_dir=$1
   local parent_dir=$2
 
+  clear
+
   if [ -d "$current_dir" ]; then
       qq_show_menu_dialog "$current_dir" "$parent_dir"
   elif [ -f "$current_dir" ]; then
-      echo "$current_dir is a file"
+    read -e -p "
+    Do you wish to run ${current_dir} ? [y/n] (default: y)" YN
+
+    [[ $YN == "y" || $YN == "Y" || $YN == "" ]] && sh ${current_dir}
   else
-      echo "$current_dir is neither a file nor a directory"
+      echo "Selected item cannot be processed"
   fi
 }
 
-qq_main
+qq_main "$@"
