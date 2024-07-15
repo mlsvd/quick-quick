@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-ROOT_DIR=~/qq_dir
+ROOT_DIR=~/qq_bookmarks
 
 is_dialog_installed() {
   command -v dialog >/dev/null 2>&1
