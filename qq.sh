@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-ROOT_DIR=~/qq_bookmarks
+readonly ROOT_DIR=~/qq_bookmarks
 
 is_dialog_installed() {
   command -v dialog >/dev/null 2>&1
@@ -27,7 +27,7 @@ qq_show_menu_dialog() {
   local parent_dir=$2
   local dialog_options=()
   local choice
-  declare -A options_map
+  local -A options_map
 
   clear
 
@@ -39,6 +39,7 @@ qq_show_menu_dialog() {
     index=$((index + 1))
   fi
 
+  shopt -s nullglob
   for entry in "$current_dir"/*; do
     if [ -d "$entry" ]; then
       dialog_options+=("${index})" "$(basename "$entry")")
@@ -49,6 +50,7 @@ qq_show_menu_dialog() {
     fi
     index=$((index + 1))
   done
+  shopt -u nullglob
 
   if [ ${#dialog_options[@]} -eq 0 ]; then
     echo "No entries available."
@@ -70,9 +72,10 @@ qq_show_menu_dialog() {
   fi
 
   if [ -n "$choice" ]; then
-    local sanitized_choice=$(sanitize_user_choice "$choice")
-    selected_value=$(echo "${options_map[$sanitized_choice]}")
-    select_dialog_option "${selected_value}" "${parent_dir}"
+    local sanitized_choice
+    sanitized_choice=$(sanitize_user_choice "$choice")
+    local selected_value="${options_map[$sanitized_choice]}"
+    select_dialog_option "${selected_value}" "${current_dir}"
   else
     echo "No selection made."
   fi
@@ -85,7 +88,7 @@ sanitize_user_choice() {
   if [[ "$sanitized_choice" != *")" ]]; then
     sanitized_choice="${sanitized_choice})"
   fi
-  echo $sanitized_choice
+  echo "$sanitized_choice"
 }
 
 select_dialog_option() {
@@ -95,14 +98,14 @@ select_dialog_option() {
   clear
 
   if [ -d "$current_dir" ]; then
-      qq_show_menu_dialog "$current_dir" "$parent_dir"
+    qq_show_menu_dialog "$current_dir" "$parent_dir"
   elif [ -f "$current_dir" ]; then
     read -e -p "
     Do you wish to run ${current_dir} ? [y/n] (default: y)" YN
 
-    [[ $YN == "y" || $YN == "Y" || $YN == "" ]] && sh ${current_dir}
+    [[ $YN == "y" || $YN == "Y" || $YN == "" ]] && bash "${current_dir}"
   else
-      echo "Selected item cannot be processed"
+    echo "Selected item cannot be processed"
   fi
 }
 
