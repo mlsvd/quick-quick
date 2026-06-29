@@ -48,15 +48,20 @@ Run the script:
 qq
 ```
 
-To use a different directory, pass the path as an argument:
+To view usage instructions and help:
 ```bash
-qq /path/to/scripts_directory
+qq --help
+```
+
+To use a different directory, pass the path using the `--path` argument:
+```bash
+qq --path=/path/to/scripts_directory
 ```
 
 You can also create aliases for specific directories:
 ```bash
-alias qq_work='source /path/to/qq.sh /path/to/work_scripts'
-alias qq_dev='source /path/to/qq.sh /path/to/dev_scripts'
+alias qq_work='source /path/to/qq.sh --path=/path/to/work_scripts'
+alias qq_dev='source /path/to/qq.sh --path=/path/to/dev_scripts'
 ```
 
 When running the script, a menu will be displayed with available scripts and subdirectories.
